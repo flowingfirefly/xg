@@ -1,0 +1,6 @@
+#!/bin/sh
+
+GOOS=windows GOARCH=amd64 go build -o xg-win64.exe main.go
+GOOS=linux   GOARCH=amd64 go build -o xg-linux-amd64 main.go
+GOOS=darwin  GOARCH=amd64 go build -o xg-mac-amd64 main.go
+
