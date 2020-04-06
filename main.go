@@ -4,7 +4,6 @@ import (
   "fmt"
   "os"
   "regexp"
-  "sync"
   "xg/BILIBILI"
 )
 
@@ -42,17 +41,15 @@ func main() {
     return
   }
 
-  w := sync.WaitGroup{}
   switch website[1] {
   case "www.bilibili.com":
-    BILIBILI.AutoDownload(options.Url, &w)
+    BILIBILI.AutoDownload(options.Url)
   case "space.bilibili.com":
-    BILIBILI.AutoDownload(options.Url, &w)
+    BILIBILI.AutoDownload(options.Url)
   case "www.youtube.com":
     fmt.Println(website)
   default:
-    fmt.Println(website)
+    fmt.Println("website unsupported")
   }
 
-  w.Wait()
 }

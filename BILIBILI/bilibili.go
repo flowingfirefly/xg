@@ -9,6 +9,12 @@ import (
   "sync"
 )
 
+const (
+  Cookie    string = "SESSDATA=7e12429d%2C1601717808%2C35fc0*41" // 此cookie随时可能过期,过期后将会导致视频可下载清晰度下降.
+  UserAgent string = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36"
+  Referer   string = "https://www.bilibili.com"
+)
+
 type M4S struct {
   VideoUrl string
   AudioUrl string
@@ -17,12 +23,13 @@ type M4S struct {
 type FLV []string
 
 type CInfo struct {
-  AVID  uint64
-  BVID  string
-  CID   uint64
-  Title string
-  M4S   *M4S
-  FLV   *FLV
+  AVID        uint64
+  BVID        string
+  CID         uint64
+  Title       string
+  M4S         *M4S
+  FLV         *FLV
+  QualityName string
 }
 
 func query_size(req http.Request) uint64 {
@@ -151,6 +158,8 @@ func QueryPlayurl(avid uint64, bvid string, cid uint64) CInfo {
 
   result := API_play_playurl(avid, bvid, cid)
 
+  info.QualityName = GetQualityName(result.Data.Quality)
+
   if result.Data.Durl != nil {
     info.FLV = &FLV{}
     for i := 0; i < len(*result.Data.Durl); i++ {
@@ -159,8 +168,6 @@ func QueryPlayurl(avid uint64, bvid string, cid uint64) CInfo {
   }
   if result.Data.Dash != nil {
     info.M4S = &M4S{}
-    //fmt.Println(result.Data.Dash.Video[0].BaseUrl)
-    //fmt.Println(result.Data.Dash.Audio[0].BaseUrl)
 
     info.M4S.AudioUrl = result.Data.Dash.Audio[0].BaseUrl
     info.M4S.VideoUrl = result.Data.Dash.Video[0].BaseUrl
@@ -168,7 +175,7 @@ func QueryPlayurl(avid uint64, bvid string, cid uint64) CInfo {
   return info
 }
 
-func AutoDownload(url string, group *sync.WaitGroup) bool {
+func AutoDownload(url string) bool {
 
   regexAVID, _ := regexp.Compile(`video/av([0-9]+)`)
   regexBVID, _ := regexp.Compile(`video/(BV[a-zA-Z0-9]+)`)
@@ -184,7 +191,7 @@ func AutoDownload(url string, group *sync.WaitGroup) bool {
         info.AVID = result.Data.AVID
         info.BVID = result.Data.BVID
         info.CID = result.Data.Pages[i].Id
-        fmt.Println(info.AVID, info.BVID, info.CID, info.Title)
+        fmt.Println(info.AVID, info.BVID, info.CID, info.QualityName, info.Title)
         infos = append(infos, info)
       }
     } else {
@@ -199,7 +206,7 @@ func AutoDownload(url string, group *sync.WaitGroup) bool {
       info.AVID = result.Data.AVID
       info.BVID = result.Data.BVID
       info.CID = result.Data.Pages[i].Id
-      fmt.Println(info.AVID, info.BVID, info.CID, info.Title)
+      fmt.Println(info.AVID, info.BVID, info.CID, info.QualityName, info.Title)
       infos = append(infos, info)
     }
   } else if matchs := regexChannel.FindStringSubmatch(url); matchs != nil && len(matchs) == 3 {
@@ -216,7 +223,7 @@ func AutoDownload(url string, group *sync.WaitGroup) bool {
         info.AVID = result.Data.AVID
         info.BVID = result.Data.BVID
         info.CID = result.Data.Pages[i].Id
-        fmt.Println(info.AVID, info.BVID, info.CID, info.Title)
+        fmt.Println(info.AVID, info.BVID, info.CID, info.QualityName, info.Title)
         infos = append(infos, info)
       }
     }

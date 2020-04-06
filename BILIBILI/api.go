@@ -135,7 +135,7 @@ func API_play_playurl(avid uint64, bvid string, cid uint64) *API_play_playurl_re
   args.Add("otype", "json")
   args.Add("fnver", "0")
   args.Add("fnval", "16")
-  args.Add("session", "aa7e4f4b55270fec8d9bd99db95c94f6")
+  //args.Add("session", "aa7e4f4b55270fec8d9bd99db95c94f6")
   if body := SimpleGET(fmt.Sprintf("https://api.bilibili.com/x/player/playurl?%v", args.Encode())); body != nil {
     result = &API_play_playurl_result{}
     json.Unmarshal([]byte(body), result)
@@ -182,9 +182,9 @@ func API_space_channel_video(mid uint64, cid uint64) *API_space_channel_video_re
 
 func SimpleGET(url string) []byte {
   req, _ := http.NewRequest("GET", url, nil)
-  req.Header.Add("Cookie", "SESSDATA=576d39c8%2C1601646951%2Cd08bf*41")
-  req.Header.Add("Referer", "https://www.bilibili.com")
-  req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36")
+  req.Header.Add("Cookie", Cookie)
+  req.Header.Add("Referer", Referer)
+  req.Header.Add("User-Agent", UserAgent)
   client := http.Client{}
   resp, err := client.Do(req)
 
