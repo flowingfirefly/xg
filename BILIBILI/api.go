@@ -67,7 +67,8 @@ type API_play_playurl_dash struct {
 }
 
 type API_playurl_durl_item struct {
-  Url string `json:"url"`
+  Size uint64 `json:"size"`
+  Url  string `json:"url"`
 }
 
 //web-interface/view
@@ -136,7 +137,7 @@ func API_play_playurl(avid uint64, bvid string, cid uint64) *API_play_playurl_re
   args.Add("fnver", "0")
   args.Add("fnval", "16")
   //args.Add("session", "aa7e4f4b55270fec8d9bd99db95c94f6")
-  if body := SimpleGET(fmt.Sprintf("https://api.bilibili.com/x/player/playurl?%v", args.Encode())); body != nil {
+  if body := SimpleGET(fmt.Sprintf("http://api.bilibili.com/x/player/playurl?%v", args.Encode())); body != nil {
     result = &API_play_playurl_result{}
     json.Unmarshal([]byte(body), result)
   }
@@ -157,7 +158,7 @@ func API_web_interface_view(avid *uint64, bvid *string, cid *uint64) *API_web_in
     args.Add("aid", fmt.Sprintf("%v", *cid))
   }
 
-  if body := SimpleGET(fmt.Sprintf("https://api.bilibili.com/x/web-interface/view?%v", args.Encode())); body != nil {
+  if body := SimpleGET(fmt.Sprintf("http://api.bilibili.com/x/web-interface/view?%v", args.Encode())); body != nil {
     result = &API_web_interface_view_result{}
     json.Unmarshal([]byte(body), result)
   }
