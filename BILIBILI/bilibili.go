@@ -1,9 +1,7 @@
 package BILIBILI
 
 import (
-  "encoding/json"
   "fmt"
-  "io/ioutil"
   "net/http"
   "os"
   "regexp"
@@ -11,96 +9,20 @@ import (
   "sync"
 )
 
+type M4S struct {
+  VideoUrl string
+  AudioUrl string
+}
+
+type FLV []string
+
 type CInfo struct {
-  Id   uint64
-  Name string
-}
-
-type CInfoLite struct {
-  Id   uint64 `json:"cid"`
-  Page int    `json:"page"`
-  Part string `json:"part"`
-}
-
-type API_view_data struct {
-  Id    uint64      `json:"aid"`
-  Pages []CInfoLite `json:"pages"`
-}
-
-type API_playurl_dash_audio_item struct {
-  Quality uint   `json:"id"`
-  BaseUrl string `json:"baseUrl"`
-}
-
-type API_playurl_dash_video_item struct {
-  Quality uint   `json:"id"`
-  BaseUrl string `json:"baseUrl"`
-}
-
-type API_playurl_dash struct {
-  Duration uint64                        `json:"duration"`
-  Video    []API_playurl_dash_video_item `json:"video"`
-  Audio    []API_playurl_dash_audio_item `json:"audio"`
-}
-
-type API_playurl_durl_item struct {
-  Url string `json:"url"`
-}
-
-type API_playurl_durl []API_playurl_durl_item
-
-type API_playurl_data struct {
-  Quality    int               `json:"quality"`
-  Format     string            `json:"format"`
-  Timelength int               `json:"timelength"`
-  Durl       *API_playurl_durl `json:"durl"`
-  Dash       *API_playurl_dash `json:"dash"`
-}
-
-type API_view_result struct {
-  Code int           `json:"code"`
-  TTL  int           `json:"ttl"`
-  Msg  string        `json:"message"`
-  Data API_view_data `json:"data"`
-}
-
-//type API_playlist_result struct {
-//  Code int           `json:"code"`
-//  TTL  int           `json:"ttl"`
-//  Msg  string        `json:"message"`
-//  Data API_view_data `json:"data"`
-//}
-
-type API_playurl_result struct {
-  Code int              `json:"code"`
-  TTL  int              `json:"ttl"`
-  Msg  string           `json:"message"`
-  Data API_playurl_data `json:"data"`
-}
-
-var quality map[int]string
-
-//   "0":"自动",
-//   "15":"流畅 360P",
-//   "16":"流畅 360P",
-//   "32":"清晰 480P",
-//   "48":"高清 720P",
-//   "64":"高清 720P",
-//   "74":"高清 720P60",
-//   "80":"高清 1080P",
-//   "112":"高清 1080P+",
-//   "116":"高清 1080P60",
-//   "120":"超清 4K"
-func SimpleGET(url string) []byte {
-  resp, err := http.Get(url)
-  if err != nil {
-    return nil
-
-  }
-  defer resp.Body.Close()
-
-  body, _ := ioutil.ReadAll(resp.Body)
-  return body
+  AVID  uint64
+  BVID  string
+  CID   uint64
+  Title string
+  M4S   *M4S
+  FLV   *FLV
 }
 
 func query_size(req http.Request) uint64 {
@@ -224,94 +146,82 @@ func copy_header(dst *http.Header, src *http.Header) {
   }
 }
 
-func QueryPlayurl(avid uint64, c CInfoLite, group *sync.WaitGroup) CInfo {
+func QueryPlayurl(avid uint64, bvid string, cid uint64) CInfo {
   var info CInfo
 
-  header := make(http.Header)
-  header.Add("Referer", "https://www.bilibili.com")
-  header.Add("Cookie", "SESSDATA=576d39c8%2C1601646951%2Cd08bf*41")
-  header.Add("Cache-Control", "no-cache")
-  header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36")
-
-  playurlReq, _ := http.NewRequest("GET", fmt.Sprintf("https://api.bilibili.com/x/player/playurl?avid=%v&cid=%v&bvid=&qn=120&type=&otype=json&fnver=0&fnval=16&session=aa7e4f4b55270fec8d9bd99db95c94f6", avid, c.Id), nil)
-  copy_header(&playurlReq.Header, &header)
-
-  client := http.Client{}
-  resp, _ := client.Do(playurlReq)
-  if resp == nil {
-    fmt.Println("????")
-  }
-  defer resp.Body.Close()
-
-  body, _ := ioutil.ReadAll(resp.Body)
-  var result API_playurl_result
-  json.Unmarshal(body, &result)
+  result := API_play_playurl(avid, bvid, cid)
 
   if result.Data.Durl != nil {
+    info.FLV = &FLV{}
     for i := 0; i < len(*result.Data.Durl); i++ {
-      fmt.Println((*result.Data.Durl)[i].Url)
-      group.Add(1)
-      filename := get_filename_from_url((*result.Data.Durl)[i].Url)
-      videoReq, _ := http.NewRequest("GET", (*result.Data.Durl)[i].Url, nil)
-      copy_header(&videoReq.Header, &header)
-      dl(*videoReq, filename, group)
+      *info.FLV = append(*info.FLV, (*result.Data.Durl)[i].Url)
     }
   }
   if result.Data.Dash != nil {
-    fmt.Println(result.Data.Dash.Video[0].BaseUrl)
-    fmt.Println(result.Data.Dash.Audio[0].BaseUrl)
+    info.M4S = &M4S{}
+    //fmt.Println(result.Data.Dash.Video[0].BaseUrl)
+    //fmt.Println(result.Data.Dash.Audio[0].BaseUrl)
 
-    videoReq, _ := http.NewRequest("GET", result.Data.Dash.Video[0].BaseUrl, nil)
-    audioReq, _ := http.NewRequest("GET", result.Data.Dash.Audio[0].BaseUrl, nil)
-    copy_header(&videoReq.Header, &header)
-    copy_header(&audioReq.Header, &header)
-    videoName := get_filename_from_url(result.Data.Dash.Video[0].BaseUrl)
-    audioName := get_filename_from_url(result.Data.Dash.Audio[0].BaseUrl)
-
-    group.Add(2)
-    dl(*videoReq, videoName, group)
-    dl(*audioReq, audioName, group)
+    info.M4S.AudioUrl = result.Data.Dash.Audio[0].BaseUrl
+    info.M4S.VideoUrl = result.Data.Dash.Video[0].BaseUrl
   }
   return info
 }
 
-func QueryAvInfo(avid string) API_view_result {
-  body := SimpleGET("https://api.bilibili.com/x/web-interface/view?aid=" + avid)
-
-  var result API_view_result
-  //fmt.Println(string(body))
-  json.Unmarshal([]byte(body), &result)
-  return result
-}
-
-func QueryBvInfo(bvid string) API_view_result {
-  body := SimpleGET("https://api.bilibili.com/x/web-interface/view?bvid=" + bvid)
-
-  var result API_view_result
-  //fmt.Println(string(body))
-  json.Unmarshal([]byte(body), &result)
-  return result
-}
-
 func AutoDownload(url string, group *sync.WaitGroup) bool {
-  var result API_view_result
 
   regexAVID, _ := regexp.Compile(`video/av([0-9]+)`)
   regexBVID, _ := regexp.Compile(`video/(BV[a-zA-Z0-9]+)`)
-  matchsAVID := regexAVID.FindStringSubmatch(url)
-  matchsBVID := regexBVID.FindStringSubmatch(url)
+  regexChannel, _ := regexp.Compile(`space.bilibili.com/(\d+)/channel/detail\?cid=(\d+)$`)
 
-  if matchsAVID != nil {
-    result = QueryAvInfo(matchsAVID[1])
-  } else if matchsBVID != nil {
-    result = QueryBvInfo(matchsBVID[1])
+  var infos []CInfo
+  if matchs := regexAVID.FindStringSubmatch(url); matchs != nil && len(matchs) == 2 {
+    if avid, err := strconv.ParseUint(matchs[1], 10, 64); err == nil {
+      result := API_web_interface_view(&avid, nil, nil)
+      for i := 0; i < len(result.Data.Pages); i++ {
+        info := QueryPlayurl(result.Data.AVID, result.Data.BVID, result.Data.Pages[i].Id)
+        info.Title = result.Data.Pages[i].Part
+        info.AVID = result.Data.AVID
+        info.BVID = result.Data.BVID
+        info.CID = result.Data.Pages[i].Id
+        fmt.Println(info.AVID, info.BVID, info.CID, info.Title)
+        infos = append(infos, info)
+      }
+    } else {
+      return false
+    }
+  } else if matchs := regexBVID.FindStringSubmatch(url); matchs != nil && len(matchs) == 2 {
+    bvid := matchs[1]
+    result := API_web_interface_view(nil, &bvid, nil)
+    for i := 0; i < len(result.Data.Pages); i++ {
+      info := QueryPlayurl(result.Data.AVID, result.Data.BVID, result.Data.Pages[i].Id)
+      info.Title = result.Data.Pages[i].Part
+      info.AVID = result.Data.AVID
+      info.BVID = result.Data.BVID
+      info.CID = result.Data.Pages[i].Id
+      fmt.Println(info.AVID, info.BVID, info.CID, info.Title)
+      infos = append(infos, info)
+    }
+  } else if matchs := regexChannel.FindStringSubmatch(url); matchs != nil && len(matchs) == 3 {
+    mid, _ := strconv.ParseUint(matchs[1], 10, 64)
+    cid, _ := strconv.ParseUint(matchs[2], 10, 64)
+
+    result := API_space_channel_video(mid, cid)
+    for _, v := range result.Data.List.Archives {
+      result := API_web_interface_view(&v.AVID, &v.BVID, nil)
+
+      for i := 0; i < len(result.Data.Pages); i++ {
+        info := QueryPlayurl(result.Data.AVID, result.Data.BVID, result.Data.Pages[i].Id)
+        info.Title = result.Data.Pages[i].Part
+        info.AVID = result.Data.AVID
+        info.BVID = result.Data.BVID
+        info.CID = result.Data.Pages[i].Id
+        fmt.Println(info.AVID, info.BVID, info.CID, info.Title)
+        infos = append(infos, info)
+      }
+    }
   } else {
     return false
-  }
-
-  for i := 0; i < len(result.Data.Pages); i++ {
-    fmt.Println(result.Data.Pages[i].Part)
-    QueryPlayurl(result.Data.Id, result.Data.Pages[i], group)
   }
 
   return true
