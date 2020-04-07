@@ -30,7 +30,7 @@ type TaskGroup struct {
 }
 
 const (
-  SEGMENT_MIN_SIZE uint64 = (1024 * 1024 * 10)
+  SEGMENT_MIN_SIZE uint64 = (1024 * 1024 * 10) //每个协程负责下载最多10MB的数据
 )
 
 func __min(a uint64, b uint64) uint64 {
@@ -125,7 +125,7 @@ func (this *Dl) download(group TaskGroup) {
     rangeGroup := new(sync.WaitGroup)
     var segmentSize uint64 = v.TotalSize / 32
     segmentSize = __max(segmentSize, SEGMENT_MIN_SIZE)
-
+    //每个协程负责下载最多10MB的数据
     for range_start := uint64(0); range_start < v.TotalSize; range_start += segmentSize {
       rangeGroup.Add(1)
       range_end := __min(v.TotalSize-1, range_start+segmentSize-1)

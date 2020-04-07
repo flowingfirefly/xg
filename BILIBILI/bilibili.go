@@ -8,6 +8,7 @@ import (
   "os/exec"
   "regexp"
   "strconv"
+  "strings"
 )
 
 const (
@@ -33,6 +34,7 @@ type CInfo struct {
   AVID        uint64
   BVID        string
   CID         uint64
+  Part        string
   Title       string
   M4S         *M4S
   FLV         *FLV
@@ -125,15 +127,52 @@ func (this *CInfo) Completed() {
 
   dir, _ := os.Getwd()
 
-  if this.FLV != nil {
-    outputPath := fmt.Sprintf("%v.flv", this.CID)
-    concatPath := ".concat" // merge list file should be in the current directory
-    _, err := os.Stat(outputPath)
-    if err == nil {
-      return
+  get_dirname := func() string {
+    dir := this.Title
+    // windows 平台下文件名不允许出现这些字符
+    var chars []string = []string{"\\", "/", ":", "*", "?", "<", ">", "|"}
+    for _, v := range chars {
+      dir = strings.ReplaceAll(dir, v, "_")
     }
-    println(this.Title + " 开始合并flv")
-    // write ffmpeg input file list
+    return dir
+  }
+  get_filename := func() string {
+    var name string
+    var suffix string
+    if this.FLV != nil {
+      suffix = ".flv"
+    }
+    if this.M4S != nil {
+      suffix = ".mp4"
+    }
+
+    if this.Part != "" {
+      name = this.Part
+    } else {
+      name = fmt.Sprintf("%v", this.CID)
+    }
+
+    // windows 平台下文件名不允许出现这些字符
+    var chars []string = []string{"\\", "/", ":", "*", "?", "<", ">", "|"}
+    for _, v := range chars {
+      name = strings.ReplaceAll(name, v, "_")
+    }
+    return name + suffix
+  }
+
+  outputDir := get_dirname()
+  outputName := get_filename()
+  outputPath := outputDir + "/" + outputName
+  os.Mkdir(outputDir, 0700)
+
+  _, err := os.Stat(outputPath)
+  if err == nil {
+    return
+  }
+  println(this.Title + " 开始合并")
+
+  if this.FLV != nil {
+    concatPath := ".concat"
     concatFile, _ := os.OpenFile(concatPath, os.O_CREATE|os.O_WRONLY, 0600)
     for _, v := range *this.FLV {
       concatFile.Write([]byte(fmt.Sprintf("file '%s'\n", "tmp/"+v.Name)))
@@ -157,12 +196,6 @@ func (this *CInfo) Completed() {
   }
 
   if this.M4S != nil {
-    outputPath := fmt.Sprintf("%v.mp4", this.CID)
-    _, err := os.Stat(outputPath)
-    if err == nil {
-      return
-    }
-    println(this.Title + " 开始合并mp4")
     cmd := exec.Command(
       dir+"/ffmpeg",
       "-y",
@@ -188,7 +221,8 @@ func AutoParse(url string) []CInfo {
       result := API_web_interface_view(&avid, nil, nil)
       for i := 0; i < len(result.Data.Pages); i++ {
         info := QueryPlayurl(result.Data.AVID, result.Data.BVID, result.Data.Pages[i].Id)
-        info.Title = result.Data.Pages[i].Part
+        info.Title = result.Data.Title
+        info.Part = result.Data.Pages[i].Part
         info.AVID = result.Data.AVID
         info.BVID = result.Data.BVID
         info.CID = result.Data.Pages[i].Id
@@ -203,7 +237,8 @@ func AutoParse(url string) []CInfo {
     result := API_web_interface_view(nil, &bvid, nil)
     for i := 0; i < len(result.Data.Pages); i++ {
       info := QueryPlayurl(result.Data.AVID, result.Data.BVID, result.Data.Pages[i].Id)
-      info.Title = result.Data.Pages[i].Part
+      info.Title = result.Data.Title
+      info.Part = result.Data.Pages[i].Part
       info.AVID = result.Data.AVID
       info.BVID = result.Data.BVID
       info.CID = result.Data.Pages[i].Id
@@ -220,7 +255,8 @@ func AutoParse(url string) []CInfo {
 
       for i := 0; i < len(result.Data.Pages); i++ {
         info := QueryPlayurl(result.Data.AVID, result.Data.BVID, result.Data.Pages[i].Id)
-        info.Title = result.Data.Pages[i].Part
+        info.Title = result.Data.Title
+        info.Part = result.Data.Pages[i].Part
         info.AVID = result.Data.AVID
         info.BVID = result.Data.BVID
         info.CID = result.Data.Pages[i].Id
