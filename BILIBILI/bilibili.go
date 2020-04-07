@@ -99,7 +99,7 @@ func QueryPlayurl(avid uint64, bvid string, cid uint64) CInfo {
   return info
 }
 
-func (this *CInfo) MakeHeader() http.Header{
+func (this *CInfo) MakeHeader() http.Header {
   header := http.Header{}
   header.Add("Referer", Referer)
   header.Add("User-Agent", UserAgent)

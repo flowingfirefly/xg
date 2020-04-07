@@ -30,7 +30,7 @@ type TaskGroup struct {
 }
 
 const (
-  SEGMENT_MIN_SIZE uint64 = (1024 * 1024)
+  SEGMENT_MIN_SIZE uint64 = (1024 * 1024 * 10)
 )
 
 func __min(a uint64, b uint64) uint64 {
@@ -101,7 +101,6 @@ func (this *Dl) download(group TaskGroup) {
   pbar := pb.Start64(int64(totalSize))
   pbar.Start()
   pbar.Set(pb.Bytes, true)
-  defer pbar.Finish()
 
   for _, v := range group.Tasks {
     tmpto := "tmp/_" + v.Filename
@@ -137,6 +136,7 @@ func (this *Dl) download(group TaskGroup) {
     file.Close()
     os.Rename(tmpto, saveto)
   }
+  pbar.Finish()
   group.Handler.Completed()
 
 }
