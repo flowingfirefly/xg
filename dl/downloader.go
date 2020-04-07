@@ -113,7 +113,7 @@ func (this *Dl) download(group TaskGroup) {
     }
 
     os.MkdirAll("tmp", os.ModePerm)
-    file, e := os.OpenFile(tmpto, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+    file, e := os.OpenFile(tmpto, os.O_CREATE|os.O_WRONLY, 0600)
     if file == nil {
       e = e
       continue

@@ -1,8 +1,11 @@
 package BILIBILI
 
 import (
+  "bytes"
   "fmt"
   "net/http"
+  "os"
+  "os/exec"
   "regexp"
   "strconv"
 )
@@ -106,8 +109,71 @@ func (this *CInfo) MakeHeader() http.Header {
   return header
 }
 
+func cmd_exec(cmd *exec.Cmd) error {
+  var stderr bytes.Buffer
+  cmd.Stderr = &stderr
+  err := cmd.Run()
+  if err != nil {
+    fmt.Println(stderr.String())
+    return fmt.Errorf("%s\n%s", err, stderr.String())
+  }
+
+  return nil
+}
+
 func (this *CInfo) Completed() {
-  println(this.Title + " 下载完成,开始合并")
+
+  dir, _ := os.Getwd()
+
+  if this.FLV != nil {
+    outputPath := fmt.Sprintf("%v.flv", this.CID)
+    concatPath := ".concat" // merge list file should be in the current directory
+    _, err := os.Stat(outputPath)
+    if err == nil {
+      return
+    }
+    println(this.Title + " 开始合并flv")
+    // write ffmpeg input file list
+    concatFile, _ := os.OpenFile(concatPath, os.O_CREATE|os.O_WRONLY, 0600)
+    for _, v := range *this.FLV {
+      concatFile.Write([]byte(fmt.Sprintf("file '%s'\n", "tmp/"+v.Name)))
+    }
+    concatFile.Close()
+
+    cmd := exec.Command(
+      dir+"/ffmpeg",
+      "-y",
+      "-f", "concat",
+      "-safe",
+      "-1",
+      "-i", concatPath,
+      "-c",
+      "copy",
+      "-bsf:a", "aac_adtstoasc",
+      outputPath,
+    )
+    cmd_exec(cmd)
+    os.Remove(concatPath)
+  }
+
+  if this.M4S != nil {
+    outputPath := fmt.Sprintf("%v.mp4", this.CID)
+    _, err := os.Stat(outputPath)
+    if err == nil {
+      return
+    }
+    println(this.Title + " 开始合并mp4")
+    cmd := exec.Command(
+      dir+"/ffmpeg",
+      "-y",
+      "-i", "tmp/"+this.M4S.Video.Name,
+      "-i", "tmp/"+this.M4S.Audio.Name,
+      "-c:v", "copy",
+      "-c:a", "copy",
+      outputPath)
+    cmd_exec(cmd)
+  }
+  println(this.Title + " 合并完成")
 }
 
 func AutoParse(url string) []CInfo {
