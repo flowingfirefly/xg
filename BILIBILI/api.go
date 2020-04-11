@@ -43,10 +43,17 @@ type API_web_interface_view_page struct {
   Part string `json:"part"`
 }
 
+type API_web_interface_view_owner struct {
+  Mid  uint64
+  Name string
+}
+
 type API_web_interface_view_data struct {
+  CTime uint64                        `json:"ctime"`
   AVID  uint64                        `json:"aid"`
   BVID  string                        `json:"bvid"`
   Title string                        `json:"title"`
+  Owner API_web_interface_view_owner  `json:"owner"`
   Pages []API_web_interface_view_page `json:"pages"`
 }
 

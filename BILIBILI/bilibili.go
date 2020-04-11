@@ -219,6 +219,8 @@ func AutoParse(url string) []CInfo {
   if matchs := regexAVID.FindStringSubmatch(url); matchs != nil && len(matchs) == 2 {
     if avid, err := strconv.ParseUint(matchs[1], 10, 64); err == nil {
       result := API_web_interface_view(&avid, nil, nil)
+      fmt.Println(result.Data.Title)
+      fmt.Println(result.Data.Owner.Name)
       for i := 0; i < len(result.Data.Pages); i++ {
         info := QueryPlayurl(result.Data.AVID, result.Data.BVID, result.Data.Pages[i].Id)
         info.Title = result.Data.Title
@@ -226,7 +228,7 @@ func AutoParse(url string) []CInfo {
         info.AVID = result.Data.AVID
         info.BVID = result.Data.BVID
         info.CID = result.Data.Pages[i].Id
-        fmt.Println(info.AVID, info.BVID, info.CID, info.QualityName, info.Title)
+        fmt.Println(info.AVID, info.BVID, info.CID, info.QualityName, info.Part)
         infos = append(infos, info)
       }
     } else {
@@ -235,6 +237,8 @@ func AutoParse(url string) []CInfo {
   } else if matchs := regexBVID.FindStringSubmatch(url); matchs != nil && len(matchs) == 2 {
     bvid := matchs[1]
     result := API_web_interface_view(nil, &bvid, nil)
+    fmt.Println(result.Data.Title)
+    fmt.Println(result.Data.Owner.Name)
     for i := 0; i < len(result.Data.Pages); i++ {
       info := QueryPlayurl(result.Data.AVID, result.Data.BVID, result.Data.Pages[i].Id)
       info.Title = result.Data.Title
@@ -242,7 +246,7 @@ func AutoParse(url string) []CInfo {
       info.AVID = result.Data.AVID
       info.BVID = result.Data.BVID
       info.CID = result.Data.Pages[i].Id
-      fmt.Println(info.AVID, info.BVID, info.CID, info.QualityName, info.Title)
+      fmt.Println(info.AVID, info.BVID, info.CID, info.QualityName, info.Part)
       infos = append(infos, info)
     }
   } else if matchs := regexChannel.FindStringSubmatch(url); matchs != nil && len(matchs) == 3 {
@@ -260,7 +264,7 @@ func AutoParse(url string) []CInfo {
         info.AVID = result.Data.AVID
         info.BVID = result.Data.BVID
         info.CID = result.Data.Pages[i].Id
-        fmt.Println(info.AVID, info.BVID, info.CID, info.QualityName, info.Title)
+        fmt.Println(info.AVID, info.BVID, info.CID, info.QualityName, info.Part)
         infos = append(infos, info)
       }
     }
