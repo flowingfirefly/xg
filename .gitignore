@@ -1,0 +1,8 @@
+*.iml
+.idea/
+.DS_Store
+xg
+xg-linux-amd64
+xg-mac-amd64
+xg-win64.exe
+/vendor/
